@@ -12,6 +12,7 @@
 #include "DebugTools/DebugInterface.h"
 #include "DebugTools/SymbolImporter.h"
 #include "Elfheader.h"
+#include "HleKernel.h"
 #include "EECycleRate.h"
 #include "EECycleRateSampler.h"
 #include "FW.h"
@@ -2275,10 +2276,12 @@ VMBootResult VMManager::Initialize(const VMBootParameters& boot_params, Error* e
 
 	// Read fast boot setting late so it can be overridden per-game.
 	// ELFs must be fast booted, and GS dumps are never fast booted.
+	// EXPERIMENTAL: HLE kernel mode has no BIOS, so there is no EELOAD for a fast boot to wait for.
 	s_fast_boot_requested =
 		(boot_params.fast_boot.value_or(static_cast<bool>(EmuConfig.EnableFastBoot)) || !s_elf_override.empty()) &&
 		(CDVDsys_GetSourceType() != CDVD_SourceType::NoDisc || !s_elf_override.empty()) &&
-		!GSDumpReplayer::IsReplayingDump();
+		!GSDumpReplayer::IsReplayingDump() &&
+		!HleKernel::IsEnabled();
 
 	if (!s_elf_override.empty())
 	{

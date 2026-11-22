@@ -94,6 +94,7 @@ set(pcsx2Sources
 	GSDumpReplayer.cpp
 	Host.cpp
 	Hotkeys.cpp
+	HleKernel.cpp
 	Hw.cpp
 	HwRead.cpp
 	HwWrite.cpp
@@ -208,6 +209,7 @@ set(pcsx2Headers
 	GSDumpReplayer.h
 	Hardware.h
 	Host.h
+	HleKernel.h
 	Hw.h
 	INISettingsInterface.h
 	IopBios.h

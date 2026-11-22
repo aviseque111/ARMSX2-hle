@@ -19,6 +19,7 @@
 #include "IPU/IPUdma.h"
 
 #include "Elfheader.h"
+#include "HleKernel.h"
 #include "CDVD/CDVD.h"
 #include "Patch.h"
 #include "GameDatabase.h"
@@ -102,6 +103,9 @@ void cpuReset()
 	g_osdsys_str = 0;
 
 	CBreakPoints::ClearSkipFirst();
+
+	// EXPERIMENTAL: in HLE kernel mode, load the boot ELF and start the EE at its entry point.
+	HleKernel::OnCpuReset();
 }
 
 __ri void cpuException(u32 code, u32 bd)

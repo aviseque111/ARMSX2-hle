@@ -1,0 +1,54 @@
+# Builds ONLY the Android APK, on demand (Actions tab -> "Android HLE test build" -> Run workflow).
+#
+# For testing the experimental HLE kernel patch from a fork: the upstream nightly / "build all"
+# workflows build every platform, refuse to run on forks, and the nightly needs signing secrets.
+# This one has no secrets: the release build falls back to the debug keystore, so the APK installs.
+name: Android HLE test build
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: platforms/android
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - name: Install NDK + CMake
+        run: yes | sdkmanager "ndk;29.0.14206865" "cmake;3.31.6" >/dev/null || true
+
+      - name: Fetch shaderc third-party deps
+        run: python3 app/src/main/cpp/3rdparty/shaderc/utils/git-sync-deps
+
+      - name: Install Rust Android target
+        run: rustup target add aarch64-linux-android
+
+      - name: Build APK
+        run: ./gradlew :app:assembleGithubRelease --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v7
+        with:
+          name: armsx2-hle-apk
+          path: platforms/android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error

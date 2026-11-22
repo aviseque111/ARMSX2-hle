@@ -14,6 +14,7 @@
 #include "Common.h"
 #include "BiosTools.h"
 #include "Config.h"
+#include "HleKernel.h"
 
 static constexpr u32 MIN_BIOS_SIZE = 4 * _1mb;
 static constexpr u32 MAX_BIOS_SIZE = 8 * _1mb;
@@ -571,6 +572,27 @@ bool IsBIOSAvailable(const std::string& full_path)
 BIOSLoadResult LoadBIOS(std::string* path_out)
 {
 	pxAssertMsg(eeMem->ROM, "PS2 system memory has not been initialized yet.");
+
+	// EXPERIMENTAL: HLE kernel mode runs without a BIOS. Hand the rest of the boot a fake, empty ROM.
+	HleKernel::Refresh();
+	if (HleKernel::IsEnabled())
+	{
+		BiosRom.assign(Ps2MemSize::Rom, 0);
+
+		// The IOP still starts at the ROM's reset vector. Put an endless loop there ("b ." and a nop) so it
+		// idles, instead of running off the end of an empty ROM into unmapped memory.
+		const u32 idle_loop[2] = {0x1000FFFFu, 0u};
+		std::memcpy(BiosRom.data(), idle_loop, sizeof(idle_loop));
+
+		BiosVersion = 0x0250; // a plausible v2.50, as the NVRAM and time zone code look at the version
+		BiosDescription = "HLE kernel (no BIOS)";
+		BiosChecksum = 0;
+		BiosPath.clear();
+		NoOSD = true; // no OSD to answer config questions for
+		if (path_out)
+			path_out->clear();
+		return BIOSLoadResult::Loaded;
+	}
 
 	std::string path = EmuConfig.FullpathToBios();
 

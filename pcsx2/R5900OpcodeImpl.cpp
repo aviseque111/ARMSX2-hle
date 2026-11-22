@@ -14,6 +14,7 @@
 #include "Host.h"
 #include "VMManager.h"
 #include "ee_divtrace.h"
+#include "HleKernel.h"
 
 // Defined in Interpreter.cpp — charges raw block cycles for a skipped syscall
 // handler (FlushCache/iFlushCache skip mirror). Global scope so the namespaced
@@ -1234,6 +1235,11 @@ void SYSCALL()
 			break;
 	}
 
+	// EXPERIMENTAL: in HLE kernel mode the syscall is carried out here, in C++, instead of by the BIOS
+	// kernel code that the exception below would run. cpuRegs.pc is already past this instruction.
+	if (HleKernel::IsEnabled() && HleKernel::HandleSyscall(call))
+		return;
+
 	cpuRegs.pc -= 4;
 	cpuException(0x20, cpuRegs.branch);
 }
@@ -1246,6 +1252,10 @@ void SYSCALL()
 // listed here as well.
 bool SyscallReadsOnlyCallNumber(u8 call)
 {
+	// In HLE kernel mode every syscall can read arguments and write $v0, so none of them qualifies.
+	if (HleKernel::IsEnabled())
+		return false;
+
 	switch (static_cast<Syscall>(call))
 	{
 		case Syscall::SetGsCrt:
